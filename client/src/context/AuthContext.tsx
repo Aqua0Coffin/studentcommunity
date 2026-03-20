@@ -30,12 +30,28 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
+// ── DEV BYPASS ──────────────────────────────────────────────
+// Set to true to preview the dashboard without the backend running.
+// Set back to false for normal use.
+const DEV_BYPASS = true;
+const MOCK_USER: User = {
+  id: 'dev-1',
+  email: 'student@college.edu',
+  role: 'STUDENT',
+  firstName: 'Kiki',
+  lastName: 'Dev',
+  departmentId: 'CS',
+  batchYear: 2024,
+};
+// ────────────────────────────────────────────────────────────
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(DEV_BYPASS ? MOCK_USER : null);
+  const [loading, setLoading] = useState(!DEV_BYPASS);
   const router = useRouter();
 
   useEffect(() => {
+    if (DEV_BYPASS) return; // skip real auth in bypass mode
     const loadUser = async () => {
       const token = Cookies.get('token');
       if (token) {
