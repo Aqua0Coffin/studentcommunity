@@ -3,207 +3,357 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { StatCard } from '@/components/ui/stat-card';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
+import { AttendanceChart } from '@/components/ui/attendance-chart';
 import {
-  BarChart3,
-  Clock,
-  ClipboardCheck,
-  ArrowRight,
-  Plus,
   CalendarDays,
-  MessageSquare,
-  Megaphone,
-  Pin,
+  RefreshCw,
+  ArrowUpRight,
+  LayoutGrid,
+  Video,
+  MapPin,
 } from 'lucide-react';
 
+// ─── Mock / Static data ──────────────────────────────────────
+const ATTENDANCE_DATA = [
+  { week: 'Wk 1', DSA: 80, OS: 90, DBMS: 75, CN: 85, Math: 88 },
+  { week: 'Wk 2', DSA: 72, OS: 88, DBMS: 80, CN: 78, Math: 92 },
+  { week: 'Wk 3', DSA: 85, OS: 76, DBMS: 70, CN: 82, Math: 80 },
+  { week: 'Wk 4', DSA: 90, OS: 82, DBMS: 88, CN: 79, Math: 75 },
+  { week: 'Wk 5', DSA: 78, OS: 91, DBMS: 84, CN: 88, Math: 83 },
+  { week: 'Wk 6', DSA: 88, OS: 85, DBMS: 91, CN: 76, Math: 87 },
+];
+
+const SUBJECT_LINES = [
+  { key: 'DSA', color: '#6366f1' },
+  { key: 'OS', color: '#ec4899' },
+  { key: 'DBMS', color: '#f59e0b' },
+  { key: 'CN', color: '#10b981' },
+  { key: 'Math', color: '#3b82f6' },
+];
+
+const UPCOMING_EVENTS = [
+  { title: 'National Hackathon', date: 'Fri, 04 Apr', time: '09:00 am', platform: 'Offline', icon: MapPin, color: '#6366f1' },
+  { title: 'Coding Contest', date: 'Sat, 05 Apr', time: '02:00 pm', platform: 'HackerRank', icon: LayoutGrid, color: '#ec4899' },
+  { title: 'AI/ML Workshop', date: 'Mon, 07 Apr', time: '11:00 am', platform: 'Zoom', icon: Video, color: '#10b981' },
+  { title: 'Tech Talk: Web3', date: 'Wed, 09 Apr', time: '04:30 pm', platform: 'Google Meet', icon: Video, color: '#f59e0b' },
+];
+
+const SKILLS = [
+  { label: 'DSA', value: 78, color: '#6366f1' },
+  { label: 'Web Development', value: 85, color: '#3b82f6' },
+  { label: 'Problem Solving', value: 72, color: '#10b981' },
+  { label: 'Aptitude', value: 63, color: '#f59e0b' },
+  { label: 'Communication', value: 80, color: '#ec4899' },
+];
+
+// ─── Avatar ring SVG (matches reference circular progress around photo) ──────
+function AvatarRing({ pct, size = 96 }: { pct: number; size?: number }) {
+  const r = (size - 8) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  const initials = 'KD'; // replaced at runtime below
+
+  return (
+    <svg width={size} height={size} className="shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={6} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke="#ec4899" strokeWidth={6}
+        strokeDasharray={circ} strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 1s ease' }}
+      />
+      <foreignObject x={8} y={8} width={size - 16} height={size - 16}>
+        <div
+          style={{ width: size - 16, height: size - 16, borderRadius: '50%', background: 'linear-gradient(135deg,#c7d2fe,#a5b4fc)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size / 4, color: '#312e81' }}
+        >{initials}</div>
+      </foreignObject>
+    </svg>
+  );
+}
+
+// ─── Circular avatar ring with real initials ──────────────────
+function ProfileRing({ name, pct, size = 96 }: { name: string; pct: number; size?: number }) {
+  const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const r = (size - 8) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+
+  return (
+    <svg width={size} height={size} className="shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={6} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke="#ec4899" strokeWidth={6}
+        strokeDasharray={circ} strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 1s ease' }}
+      />
+      <foreignObject x={8} y={8} width={size - 16} height={size - 16}>
+        <div
+          style={{
+            width: size - 16, height: size - 16, borderRadius: '50%',
+            background: 'linear-gradient(135deg,#c7d2fe,#818cf8)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 800, fontSize: Math.round(size / 3.5), color: '#fff',
+            letterSpacing: '0.05em',
+          }}
+        >{initials}</div>
+      </foreignObject>
+    </svg>
+  );
+}
+
+// ─── Custom Tooltip ───────────────────────────────────────────
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs min-w-[130px]">
+      <p className="font-bold text-slate-700 mb-2">{label}</p>
+      {payload.map((p: any) => (
+        <div key={p.dataKey} className="flex items-center justify-between gap-3 mb-1">
+          <span style={{ color: p.color }} className="font-semibold">{p.dataKey}</span>
+          <span className="font-bold text-slate-800">{p.value}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
-  const [timetable, setTimetable] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      api.get('/announcements').catch(() => ({ data: [] })),
-      api.get('/attendance/me').catch(() => ({ data: [] })),
-      api.get('/timetable').catch(() => ({ data: [] })),
-    ]).then(([ann, att, tt]) => {
-      setAnnouncements(ann.data);
-      setAttendance(att.data);
-      setTimetable(tt.data);
-    }).finally(() => setLoading(false));
+    api.get('/attendance/me')
+      .then(({ data }) => setAttendance(data))
+      .catch(() => setAttendance([]))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Compute stats
-  const avgAttendance = attendance.length > 0
-    ? Math.round(attendance.reduce((s: number, a: any) => s + Number(a.percentage ?? 0), 0) / attendance.length)
-    : null;
+  const avgPct = attendance.length
+    ? Math.round(attendance.reduce((s, a) => s + Number(a.percentage ?? 0), 0) / attendance.length)
+    : 82; // fallback mock
 
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const todayDay = new Date().getDay(); // 0=Sun
-  const todayHour = new Date().getHours();
-  // Period mapping: period 1 = 9am, 2 = 10am, etc.
-  const currentPeriod = todayHour >= 9 ? todayHour - 8 : null;
-  const nextClass = currentPeriod
-    ? timetable.find((t: any) => t.dayOfWeek === todayDay && t.periodNumber > currentPeriod)
-    : timetable.find((t: any) => t.dayOfWeek === todayDay && t.periodNumber >= 1);
-
-  const now = new Date();
-  const timeGreeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening';
-  const dateLabel = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-
-  const pinnedAnn = announcements.filter((a) => a.isPinned).slice(0, 3);
-  const recentAnn = announcements.slice(0, 4);
-
-  const quickActions = [
-    { label: 'View Timetable', icon: CalendarDays, href: '/dashboard/timetable', color: 'text-violet-600', bg: 'bg-violet-50 dark:bg-violet-950/30' },
-    { label: 'Student Forum', icon: MessageSquare, href: '/dashboard/forum', color: 'text-sky-600', bg: 'bg-sky-50 dark:bg-sky-950/30' },
-    { label: 'Apply Leave', icon: ClipboardCheck, href: '/dashboard/leaves', color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
-    { label: 'Announcements', icon: Megaphone, href: '/dashboard/announcements', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30' },
-  ];
+  const subjectCount = attendance.length || 5;
+  const fullName = user ? `${user.firstName} ${user.lastName}` : 'Kiki Dev';
 
   return (
-    <div className="space-y-8 animate-fade-up">
-      {/* Welcome Banner */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary to-indigo-400 p-6 text-white shadow-md">
-        <p className="text-sm font-medium text-indigo-100 mb-1">{dateLabel}</p>
-        <h1 className="text-2xl font-bold">{timeGreeting}, {user?.firstName} 👋</h1>
-        <p className="text-indigo-100 text-sm mt-1.5">Here's what's happening today.</p>
-      </div>
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg,#f0f2f8 0%,#eef0f8 100%)' }}>
+      <div className="max-w-[1200px] mx-auto px-4 py-6 space-y-6">
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard
-          label="Avg. Attendance"
-          value={loading ? '—' : avgAttendance !== null ? `${avgAttendance}%` : 'N/A'}
-          icon={BarChart3}
-          iconColor="text-primary"
-          iconBg="bg-accent"
-          sub={avgAttendance !== null && avgAttendance < 75 ? 'Below 75% threshold' : 'On track'}
-          trend={avgAttendance !== null ? { value: avgAttendance >= 75 ? 'Meeting target' : 'Needs attention', up: avgAttendance >= 75 } : undefined}
-          delay={50}
-        />
-        <StatCard
-          label="Next Class"
-          value={loading ? '—' : nextClass ? nextClass.subjectName : 'No more classes'}
-          icon={Clock}
-          iconColor="text-violet-600"
-          iconBg="bg-violet-50"
-          sub={nextClass ? `Period ${nextClass.periodNumber} · Room ${nextClass.roomNumber}` : 'Enjoy your day!'}
-          delay={100}
-        />
-        <StatCard
-          label="Announcements"
-          value={loading ? '—' : announcements.length}
-          icon={Megaphone}
-          iconColor="text-amber-600"
-          iconBg="bg-amber-50"
-          sub={`${pinnedAnn.length} pinned`}
-          delay={150}
-        />
-      </div>
+        {/* ── TOP HEADER ─────────────────────────────── */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">
+              {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            <h1 className="text-2xl font-bold text-slate-800">
+              Welcome, {user?.firstName ?? 'Kiki'}&nbsp;
+              <span className="text-slate-400 font-normal text-lg">— Your personal dashboard overview</span>
+            </h1>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Quick Actions */}
-          <Card className="rounded-2xl border border-border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-[15px] font-semibold text-foreground">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {quickActions.map((action) => (
+        {/* ── ROW 1: Profile + Stat Cards ──────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          {/* Profile Card */}
+          <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col items-center gap-3">
+            <div className="w-full flex items-center justify-between mb-1">
+              <span className="text-sm font-bold text-slate-700">Profile</span>
+              <RefreshCw className="w-4 h-4 text-slate-400 cursor-pointer hover:text-slate-600 transition-colors" />
+            </div>
+            <ProfileRing name={fullName} pct={avgPct} size={96} />
+            <div className="text-center">
+              <p className="font-bold text-[15px] text-slate-800">{fullName}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{user?.role === 'FACULTY' ? 'Faculty' : 'B.Tech — Computer Science'}</p>
+            </div>
+            <div className="flex items-center gap-5 mt-2 w-full justify-center">
+              <div className="text-center">
+                <p className="text-base font-bold text-slate-800">{avgPct}%</p>
+                <p className="text-[10px] text-slate-400 font-medium">Attendance</p>
+              </div>
+              <div className="w-px h-6 bg-slate-100" />
+              <div className="text-center">
+                <p className="text-base font-bold text-slate-800">{subjectCount}</p>
+                <p className="text-[10px] text-slate-400 font-medium">Subjects</p>
+              </div>
+              <div className="w-px h-6 bg-slate-100" />
+              <div className="text-center">
+                <p className="text-base font-bold text-slate-800">2</p>
+                <p className="text-[10px] text-slate-400 font-medium">Leaves</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Avg Attendance Gradient Card */}
+          <div
+            className="rounded-2xl shadow-sm p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg,#a78bfa 0%,#7c3aed 40%,#4f46e5 100%)' }}
+          >
+            <div className="flex items-start justify-between">
+              <p className="text-white/80 text-xs font-semibold uppercase tracking-wider">Average Attendance</p>
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <LayoutGrid className="w-4 h-4 text-white" />
+              </div>
+            </div>
+            <div>
+              <p className="text-5xl font-extrabold text-white leading-none mt-2">{loading ? '—' : `${avgPct}%`}</p>
+              <p className="text-white/70 text-xs font-medium mt-2">
+                {avgPct >= 75 ? 'Above threshold · On track' : 'Below 75% · Needs attention'}
+              </p>
+            </div>
+            {/* Decorative circle */}
+            <div className="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-white/10" />
+            <div className="absolute -right-2 -bottom-10 w-20 h-20 rounded-full bg-white/10" />
+          </div>
+
+          {/* Subjects Overview Gradient Card */}
+          <div
+            className="rounded-2xl shadow-sm p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg,#67e8f9 0%,#22d3ee 40%,#0891b2 100%)' }}
+          >
+            <div className="flex items-start justify-between">
+              <p className="text-white/80 text-xs font-semibold uppercase tracking-wider">Subjects Overview</p>
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <CalendarDays className="w-4 h-4 text-white" />
+              </div>
+            </div>
+            <div>
+              <p className="text-5xl font-extrabold text-white leading-none mt-2">{loading ? '—' : subjectCount}</p>
+              <p className="text-white/70 text-xs font-medium mt-2">Active subjects enrolled</p>
+            </div>
+            {/* Floating pill badges */}
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {['DSA', 'OS', 'DBMS', 'CN', 'Math'].slice(0, subjectCount || 5).map((s) => (
+                <span key={s} className="text-[10px] font-bold bg-white/25 text-white px-2 py-0.5 rounded-full">{s}</span>
+              ))}
+            </div>
+            <div className="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-white/10" />
+          </div>
+        </div>
+
+        {/* ── ROW 2: Main Content + Right Panel ────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* ── LEFT: Chart + Quick Links ─────────── */}
+          <div className="lg:col-span-2 space-y-4">
+
+            {/* Attendance Analytics Chart */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-[15px] font-bold text-slate-800">Attendance Analytics</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Weekly attendance % per subject</p>
+                </div>
+                <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full cursor-pointer hover:bg-slate-200 transition-colors">
+                  This semester ↓
+                </span>
+              </div>
+
+              <AttendanceChart />
+            </div>
+
+            {/* Quick Navigation tiles (like "Trackers connected" row) */}
+            <div className="bg-white rounded-2xl shadow-sm p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-bold text-slate-700">Quick Navigation</p>
+                <span className="text-xs text-slate-400">5 sections available</span>
+              </div>
+              <div className="grid grid-cols-5 gap-3">
+                {[
+                  { label: 'Dashboard', href: '/dashboard', emoji: '🏠' },
+                  { label: 'Timetable', href: '/dashboard/timetable', emoji: '📅' },
+                  { label: 'Forum', href: '/dashboard/forum', emoji: '💬' },
+                  { label: 'Leaves', href: '/dashboard/leaves', emoji: '📋' },
+                  { label: 'Profile', href: '/dashboard/profile', emoji: '👤' },
+                ].map((item) => (
                   <Link
-                    key={action.href}
-                    href={action.href}
-                    className={`flex flex-col items-center gap-2.5 p-4 rounded-xl ${action.bg} hover:opacity-80 transition-opacity group`}
+                    key={item.href}
+                    href={item.href}
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors group"
                   >
-                    <action.icon className={`w-6 h-6 ${action.color}`} />
-                    <span className={`text-xs font-semibold text-center leading-tight ${action.color}`}>{action.label}</span>
+                    <span className="text-2xl">{item.emoji}</span>
+                    <span className="text-[10px] font-semibold text-slate-500 text-center leading-tight group-hover:text-slate-700 transition-colors">{item.label}</span>
                   </Link>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Today's schedule preview */}
-          <Card className="rounded-2xl border border-border shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-[15px] font-semibold text-foreground">Today's Classes</CardTitle>
-              <Link href="/dashboard/timetable" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-                Full schedule <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map(i => <div key={i} className="h-14 bg-muted rounded-xl animate-pulse" />)}
-                </div>
-              ) : timetable.filter((t: any) => t.dayOfWeek === todayDay).length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm font-medium">
-                  No classes scheduled today 🎉
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {timetable.filter((t: any) => t.dayOfWeek === todayDay).map((t: any) => {
-                    const periodHour = 8 + t.periodNumber;
-                    const isCurrent = currentPeriod === t.periodNumber;
-                    return (
-                      <div key={t.id} className={`flex items-center gap-4 p-3 rounded-xl border transition-colors ${isCurrent ? 'bg-accent border-primary/30' : 'bg-card border-border'}`}>
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isCurrent ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                          P{t.periodNumber}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">{t.subjectName}</p>
-                          <p className="text-xs text-muted-foreground">{periodHour}:00 — Room {t.roomNumber}</p>
-                        </div>
-                        {isCurrent && <span className="text-xs font-bold text-primary bg-accent px-2 py-0.5 rounded-full shrink-0">Now</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+          {/* ── RIGHT PANEL ──────────────────────────── */}
+          <div className="space-y-4">
 
-        {/* Right column – Announcements */}
-        <div>
-          <Card className="rounded-2xl border border-border shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-[15px] font-semibold text-foreground">Announcements</CardTitle>
-              <Link href="/dashboard/announcements" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-                All <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2].map(i => <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />)}
-                </div>
-              ) : recentAnn.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No announcements yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {recentAnn.map((ann: any) => (
-                    <div key={ann.id} className={`p-3 rounded-xl border ${ann.isPinned ? 'border-primary/30 bg-accent' : 'border-border'}`}>
-                      <div className="flex items-start gap-2">
-                        {ann.isPinned && <Pin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />}
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground leading-tight truncate">{ann.title}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">{new Date(ann.createdAt).toLocaleDateString()}</p>
-                        </div>
+            {/* Upcoming Events (replaces My Meetings) */}
+            <div className="bg-white rounded-2xl shadow-sm p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[15px] font-bold text-slate-800">Upcoming Events</h2>
+                <Link href="/dashboard/announcements" className="text-xs font-semibold text-indigo-500 hover:text-indigo-700 flex items-center gap-0.5 transition-colors">
+                  See all <ArrowUpRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+              <div className="space-y-4">
+                {UPCOMING_EVENTS.map((ev) => (
+                  <div key={ev.title} className="flex items-start gap-3">
+                    <div className="shrink-0 min-w-[52px] text-right">
+                      <p className="text-[10px] font-bold text-slate-400 leading-tight">{ev.date.split(',')[0]}</p>
+                      <p className="text-[11px] font-bold text-slate-600">{ev.date.split(',')[1]?.trim()}</p>
+                    </div>
+                    <div className="w-px self-stretch bg-slate-100" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{ev.title}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-semibold text-slate-400">{ev.time}</span>
+                        <span className="flex items-center gap-0.5 text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: `${ev.color}18`, color: ev.color }}>
+                          <ev.icon className="w-2.5 h-2.5" /> {ev.platform}
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <ArrowUpRight className="w-4 h-4 text-slate-300 shrink-0 mt-0.5" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Skill Progress (replaces Developed Areas) */}
+            <div className="bg-white rounded-2xl shadow-sm p-5">
+              <div className="mb-4">
+                <h2 className="text-[15px] font-bold text-slate-800">Skill Progress</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Self-assessed proficiency areas</p>
+              </div>
+              <div className="space-y-4">
+                {SKILLS.map((skill) => (
+                  <div key={skill.label}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-semibold text-slate-700">{skill.label}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-slate-800">{skill.value}%</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500" />
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${skill.value}%`, background: skill.color }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
