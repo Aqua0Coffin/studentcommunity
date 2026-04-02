@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, ShieldAlert, GraduationCap, ArrowUpRight } from 'lucide-react';
+import { Search, ShieldAlert, GraduationCap, ArrowUpRight, BookOpen } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
