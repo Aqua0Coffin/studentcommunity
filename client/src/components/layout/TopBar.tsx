@@ -20,19 +20,19 @@ export function TopBar() {
   const title = PAGE_TITLES[pathname] ?? 'StudentSpace';
 
   return (
-    <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-b border-border h-14 flex items-center px-4 gap-3">
+    <header className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-panel !rounded-none !border-t-0 !border-l-0 !border-r-0 h-14 flex items-center px-4 gap-3">
       {/* Logo mark */}
-      <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center shrink-0">
-        <GraduationCap className="w-3.5 h-3.5 text-primary-foreground" />
+      <div className="w-7 h-7 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0">
+        <GraduationCap className="w-3.5 h-3.5 text-white" />
       </div>
 
       {/* Page title */}
-      <span className="flex-1 text-[15px] font-bold text-foreground">{title}</span>
+      <span className="flex-1 text-[15px] font-bold text-white">{title}</span>
 
       {/* Right actions */}
-      <button className="p-2 rounded-xl hover:bg-accent transition-colors relative">
-        <Bell className="w-4.5 h-4.5 text-muted-foreground" />
-        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full" />
+      <button className="p-2 rounded-xl hover:bg-white/10 transition-colors relative">
+        <Bell className="w-4.5 h-4.5 text-white/60" />
+        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />
       </button>
       {user && (
         <AvatarInitials name={`${user.firstName} ${user.lastName}`} size="sm" className="cursor-pointer" />
