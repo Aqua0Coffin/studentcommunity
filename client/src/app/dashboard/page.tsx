@@ -111,8 +111,8 @@ function ProfileRing({ name, pct, size = 96 }: { name: string; pct: number; size
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs min-w-[130px]">
-      <p className="font-bold text-slate-700 mb-2">{label}</p>
+    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-xl shadow-lg p-3 text-xs min-w-[130px] !text-slate-900 dark:!text-white">
+      <p className="font-bold text-slate-800 dark:text-slate-100 mb-2">{label}</p>
       {payload.map((p: any) => (
         <div key={p.dataKey} className="flex items-center justify-between gap-3 mb-1">
           <span style={{ color: p.color }} className="font-semibold">{p.dataKey}</span>
@@ -144,23 +144,23 @@ export default function DashboardPage() {
   const fullName = user ? `${user.firstName} ${user.lastName}` : 'Kiki Dev';
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg,#f0f2f8 0%,#eef0f8 100%)' }}>
+    <div className="min-h-screen relative z-10 pb-12">
       <div className="max-w-[1200px] mx-auto px-4 py-6 space-y-6">
 
         {/* ── TOP HEADER ─────────────────────────────── */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-0.5">
               {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
-            <h1 className="text-2xl font-bold text-slate-800">
+            <h1 className="text-2xl font-bold text-white">
               Welcome, {user?.firstName ?? 'Kiki'}&nbsp;
-              <span className="text-slate-400 font-normal text-lg">— Your personal dashboard overview</span>
+              <span className="text-white/40 font-normal text-lg">— Your personal dashboard overview</span>
             </h1>
           </div>
           <button
             onClick={() => window.location.reload()}
-            className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+            className="w-9 h-9 rounded-full glass-panel flex items-center justify-center text-white/50 hover:text-white transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -170,38 +170,38 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
           {/* Profile Card */}
-          <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col items-center gap-3">
+          <div className="glass-panel-light rounded-[1.75rem] p-5 flex flex-col items-center gap-3">
             <div className="w-full flex items-center justify-between mb-1">
-              <span className="text-sm font-bold text-slate-700">Profile</span>
-              <RefreshCw className="w-4 h-4 text-slate-400 cursor-pointer hover:text-slate-600 transition-colors" />
+              <span className="text-sm font-bold text-white">Profile</span>
+              <RefreshCw className="w-4 h-4 text-white/40 cursor-pointer hover:text-white transition-colors" />
             </div>
             <ProfileRing name={fullName} pct={avgPct} size={96} />
             <div className="text-center">
-              <p className="font-bold text-[15px] text-slate-800">{fullName}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{user?.role === 'FACULTY' ? 'Faculty' : 'B.Tech — Computer Science'}</p>
+              <p className="font-bold text-[15px] text-white">{fullName}</p>
+              <p className="text-xs text-white/50 mt-0.5">{user?.role === 'FACULTY' ? 'Faculty' : 'B.Tech — Computer Science'}</p>
             </div>
             <div className="flex items-center gap-5 mt-2 w-full justify-center">
               <div className="text-center">
-                <p className="text-base font-bold text-slate-800">{avgPct}%</p>
-                <p className="text-[10px] text-slate-400 font-medium">Attendance</p>
+                <p className="text-base font-bold text-white">{avgPct}%</p>
+                <p className="text-[10px] text-white/40 font-medium">Attendance</p>
               </div>
-              <div className="w-px h-6 bg-slate-100" />
+              <div className="w-px h-6 bg-white/10" />
               <div className="text-center">
-                <p className="text-base font-bold text-slate-800">{subjectCount}</p>
-                <p className="text-[10px] text-slate-400 font-medium">Subjects</p>
+                <p className="text-base font-bold text-white">{subjectCount}</p>
+                <p className="text-[10px] text-white/40 font-medium">Subjects</p>
               </div>
-              <div className="w-px h-6 bg-slate-100" />
+              <div className="w-px h-6 bg-white/10" />
               <div className="text-center">
-                <p className="text-base font-bold text-slate-800">2</p>
-                <p className="text-[10px] text-slate-400 font-medium">Leaves</p>
+                <p className="text-base font-bold text-white">2</p>
+                <p className="text-[10px] text-white/40 font-medium">Leaves</p>
               </div>
             </div>
           </div>
 
           {/* Avg Attendance Gradient Card */}
           <div
-            className="rounded-2xl shadow-sm p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg,#a78bfa 0%,#7c3aed 40%,#4f46e5 100%)' }}
+            className="rounded-[1.75rem] shadow-xl p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden border border-white/20"
+            style={{ background: 'linear-gradient(135deg, rgba(167, 139, 250, 0.75) 0%, rgba(124, 58, 237, 0.75) 40%, rgba(79, 70, 229, 0.85) 100%)', backdropFilter: 'blur(16px)' }}
           >
             <div className="flex items-start justify-between">
               <p className="text-white/80 text-xs font-semibold uppercase tracking-wider">Average Attendance</p>
@@ -222,8 +222,8 @@ export default function DashboardPage() {
 
           {/* Subjects Overview Gradient Card */}
           <div
-            className="rounded-2xl shadow-sm p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg,#67e8f9 0%,#22d3ee 40%,#0891b2 100%)' }}
+            className="rounded-[1.75rem] shadow-xl p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden border border-white/20"
+            style={{ background: 'linear-gradient(135deg, rgba(103, 232, 249, 0.75) 0%, rgba(34, 211, 238, 0.75) 40%, rgba(8, 145, 178, 0.85) 100%)', backdropFilter: 'blur(16px)' }}
           >
             <div className="flex items-start justify-between">
               <p className="text-white/80 text-xs font-semibold uppercase tracking-wider">Subjects Overview</p>
@@ -252,13 +252,13 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 space-y-4">
 
             {/* Attendance Analytics Chart */}
-            <div className="bg-white rounded-2xl shadow-sm p-6">
+            <div className="glass-panel-light rounded-[1.75rem] p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-[15px] font-bold text-slate-800">Attendance Analytics</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Weekly attendance % per subject</p>
+                  <h2 className="text-[15px] font-bold text-white">Attendance Analytics</h2>
+                  <p className="text-xs text-white/40 mt-0.5">Weekly attendance % per subject</p>
                 </div>
-                <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full cursor-pointer hover:bg-slate-200 transition-colors">
+                <span className="text-xs font-semibold text-white/50 bg-white/10 px-3 py-1.5 rounded-full cursor-pointer hover:bg-white/20 transition-colors">
                   This semester ↓
                 </span>
               </div>
@@ -267,10 +267,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Navigation tiles (like "Trackers connected" row) */}
-            <div className="bg-white rounded-2xl shadow-sm p-5">
+            <div className="glass-panel-light rounded-[1.75rem] p-5">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-bold text-slate-700">Quick Navigation</p>
-                <span className="text-xs text-slate-400">5 sections available</span>
+                <p className="text-sm font-bold text-white">Quick Navigation</p>
+                <span className="text-xs text-white/40">5 sections available</span>
               </div>
               <div className="grid grid-cols-5 gap-3">
                 {[
@@ -283,10 +283,10 @@ export default function DashboardPage() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors group"
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/15 backdrop-blur-sm border border-white/10 transition-all group"
                   >
                     <span className="text-2xl">{item.emoji}</span>
-                    <span className="text-[10px] font-semibold text-slate-500 text-center leading-tight group-hover:text-slate-700 transition-colors">{item.label}</span>
+                    <span className="text-[10px] font-semibold text-white/50 text-center leading-tight group-hover:text-white transition-colors">{item.label}</span>
                   </Link>
                 ))}
               </div>
@@ -297,10 +297,10 @@ export default function DashboardPage() {
           <div className="space-y-4">
 
             {/* Upcoming Events (replaces My Meetings) */}
-            <div className="bg-white rounded-2xl shadow-sm p-5">
+            <div className="glass-panel-light rounded-[1.75rem] p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[15px] font-bold text-slate-800">Upcoming Events</h2>
-                <Link href="/dashboard/announcements" className="text-xs font-semibold text-indigo-500 hover:text-indigo-700 flex items-center gap-0.5 transition-colors">
+                <h2 className="text-[15px] font-bold text-white">Upcoming Events</h2>
+                <Link href="/dashboard/announcements" className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5 transition-colors">
                   See all <ArrowUpRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -308,42 +308,42 @@ export default function DashboardPage() {
                 {UPCOMING_EVENTS.map((ev) => (
                   <div key={ev.title} className="flex items-start gap-3">
                     <div className="shrink-0 min-w-[52px] text-right">
-                      <p className="text-[10px] font-bold text-slate-400 leading-tight">{ev.date.split(',')[0]}</p>
-                      <p className="text-[11px] font-bold text-slate-600">{ev.date.split(',')[1]?.trim()}</p>
+                      <p className="text-[10px] font-bold text-white/40 leading-tight">{ev.date.split(',')[0]}</p>
+                      <p className="text-[11px] font-bold text-white/70">{ev.date.split(',')[1]?.trim()}</p>
                     </div>
-                    <div className="w-px self-stretch bg-slate-100" />
+                    <div className="w-px self-stretch bg-white/10" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">{ev.title}</p>
+                      <p className="text-sm font-bold text-white truncate">{ev.title}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] font-semibold text-slate-400">{ev.time}</span>
-                        <span className="flex items-center gap-0.5 text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: `${ev.color}18`, color: ev.color }}>
+                        <span className="text-[10px] font-semibold text-white/40">{ev.time}</span>
+                        <span className="flex items-center gap-0.5 text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: `${ev.color}25`, color: ev.color }}>
                           <ev.icon className="w-2.5 h-2.5" /> {ev.platform}
                         </span>
                       </div>
                     </div>
-                    <ArrowUpRight className="w-4 h-4 text-slate-300 shrink-0 mt-0.5" />
+                    <ArrowUpRight className="w-4 h-4 text-white/20 shrink-0 mt-0.5" />
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Skill Progress (replaces Developed Areas) */}
-            <div className="bg-white rounded-2xl shadow-sm p-5">
+            <div className="glass-panel-light rounded-[1.75rem] p-5">
               <div className="mb-4">
-                <h2 className="text-[15px] font-bold text-slate-800">Skill Progress</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Self-assessed proficiency areas</p>
+                <h2 className="text-[15px] font-bold text-white">Skill Progress</h2>
+                <p className="text-xs text-white/40 mt-0.5">Self-assessed proficiency areas</p>
               </div>
               <div className="space-y-4">
                 {SKILLS.map((skill) => (
                   <div key={skill.label}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-semibold text-slate-700">{skill.label}</span>
+                      <span className="text-sm font-semibold text-white/80">{skill.label}</span>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-bold text-slate-800">{skill.value}%</span>
-                        <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-sm font-bold text-white">{skill.value}%</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
                       </div>
                     </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${skill.value}%`, background: skill.color }}

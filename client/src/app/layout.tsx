@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
+import CursorGlow from "@/components/ui/cursor-glow";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
 });
 
@@ -26,12 +22,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-slate-50 dark:bg-slate-900`}>
+      <body className={`${outfit.variable} font-sans antialiased min-h-screen relative`}>
+        <CursorGlow />
         <AuthProvider>
-          {children}
+          <div className="relative z-10 min-h-screen flex flex-col">
+            {children}
+          </div>
           <Toaster />
         </AuthProvider>
       </body>
     </html>
   );
 }
+
