@@ -1,18 +1,16 @@
-import axios from 'axios';
-import Cookies from 'js-cookie';
+import { createClient } from './supabase';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+// Re-export the supabase client as the default API interface.
+// Use this throughout the app instead of the old axios-based api.
+export const supabase = createClient();
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-});
-
-api.interceptors.request.use((config) => {
-  const token = Cookies.get('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Temporary mock layer to prevent legacy axios calls from crashing dashboard pages dont forget to remove em later adithya san
+const api = {
+  get: async (url: string) => ({ data: [] }),
+  post: async (url: string, body?: any) => ({ data: {} }),
+  patch: async (url: string, body?: any) => ({ data: {} }),
+  put: async (url: string, body?: any) => ({ data: {} }),
+  delete: async (url: string) => ({ data: {} }),
+};
 
 export default api;

@@ -130,10 +130,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/attendance/me')
-      .then(({ data }) => setAttendance(data))
-      .catch(() => setAttendance([]))
-      .finally(() => setLoading(false));
+    // Simulating API fetch for attendance
+    const timer = setTimeout(() => {
+      setAttendance([{ percentage: 80 }, { percentage: 85 }]);
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const avgPct = attendance.length
