@@ -175,12 +175,22 @@ export default function DashboardPage() {
               <span className="text-white/40 font-normal text-lg">— Your personal dashboard overview</span>
             </h1>
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="w-9 h-9 rounded-full glass-panel flex items-center justify-center text-white/50 hover:text-white transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-3">
+            {(user?.role === 'ADMIN' || user?.role === 'FACULTY') && (
+              <Link
+                href="/admin"
+                className="px-4 py-2 rounded-full font-bold text-sm bg-emerald-500 hover:bg-emerald-600 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all flex items-center"
+              >
+                Go to Admin Portal →
+              </Link>
+            )}
+            <button
+              onClick={() => window.location.reload()}
+              className="w-9 h-9 rounded-full glass-panel flex items-center justify-center text-white/50 hover:text-white transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* ── ROW 1: Profile + Stat Cards ──────────── */}

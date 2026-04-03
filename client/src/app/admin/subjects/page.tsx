@@ -16,9 +16,10 @@ export default function SubjectsManagerPage() {
   const [newSubject, setNewSubject] = useState({ name: '', courseCode: '', departmentId: '' });
   const [creating, setCreating] = useState(false);
 
-  // Enrollment form state
+  // Mass Enrollment form state
   const [students, setStudents] = useState<any[]>([]);
-  const [enrollData, setEnrollData] = useState({ studentId: '', subjectId: '' });
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
@@ -72,20 +73,36 @@ export default function SubjectsManagerPage() {
 
   const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!enrollData.studentId || !enrollData.subjectId) return;
+    if (!selectedSubjectId || selectedStudentIds.length === 0) return;
     setEnrolling(true);
     try {
-      const { error } = await supabase.from('Enrollment').insert([{
-        studentId: enrollData.studentId,
-        subjectId: enrollData.subjectId
-      }]);
+      const records = selectedStudentIds.map(stId => ({
+        studentId: stId,
+        subjectId: selectedSubjectId
+      }));
+      const { error } = await supabase.from('Enrollment').upsert(records);
       if (error) throw error;
-      toast.success('Student enrolled successfully!');
-      setEnrollData({ studentId: '', subjectId: '' });
+      toast.success(`Successfully enrolled ${selectedStudentIds.length} student(s)!`);
+      setSelectedStudentIds([]);
+      setSelectedSubjectId('');
     } catch (err: any) {
       toast.error(`Failed to enroll: ${err.message}`);
     } finally {
       setEnrolling(false);
+    }
+  };
+
+  const toggleStudent = (id: string) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAllStudents = () => {
+    if (selectedStudentIds.length === students.length) {
+      setSelectedStudentIds([]);
+    } else {
+      setSelectedStudentIds(students.map(s => s.id));
     }
   };
 
@@ -185,31 +202,17 @@ export default function SubjectsManagerPage() {
             </form>
           </div>
 
-          {/* Enroll Student Form */}
-          <div className="glass-panel rounded-[1.5rem] p-6 border-indigo-900/30 mt-6">
-            <h2 className="text-xl font-bold text-white mb-4">Enroll Student</h2>
-            <form onSubmit={handleEnroll} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1 block">Select Student</label>
+          {/* Mass Enrollment Form */}
+          <div className="glass-panel rounded-[1.5rem] p-6 border-indigo-900/30 mt-6 flex flex-col h-[450px]">
+            <h2 className="text-xl font-bold text-white mb-4">Mass Enrollment</h2>
+            <form onSubmit={handleEnroll} className="flex flex-col flex-1 min-h-0 space-y-4">
+              <div className="shrink-0">
+                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1 block">1. Select Subject</label>
                 <select 
                   required
                   className="w-full h-10 px-3 bg-black/20 border border-indigo-900/40 rounded-md text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 appearance-none text-sm"
-                  value={enrollData.studentId}
-                  onChange={(e) => setEnrollData({...enrollData, studentId: e.target.value})}
-                >
-                  <option value="">-- Choose Student --</option>
-                  {students.map(st => (
-                    <option key={st.id} value={st.id}>{st.firstName} {st.lastName} ({st.email})</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1 block">Select Subject</label>
-                <select 
-                  required
-                  className="w-full h-10 px-3 bg-black/20 border border-indigo-900/40 rounded-md text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 appearance-none text-sm"
-                  value={enrollData.subjectId}
-                  onChange={(e) => setEnrollData({...enrollData, subjectId: e.target.value})}
+                  value={selectedSubjectId}
+                  onChange={(e) => setSelectedSubjectId(e.target.value)}
                 >
                   <option value="">-- Choose Subject --</option>
                   {subjects.map(su => (
@@ -217,12 +220,43 @@ export default function SubjectsManagerPage() {
                   ))}
                 </select>
               </div>
+
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex items-center justify-between mb-1 shrink-0">
+                  <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block">2. Select Students</label>
+                  <button 
+                    type="button" 
+                    onClick={toggleAllStudents}
+                    className="text-xs font-bold text-indigo-400 hover:text-indigo-300"
+                  >
+                    {selectedStudentIds.length === students.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto bg-black/20 border border-indigo-900/40 rounded-md p-2 space-y-1 custom-scrollbar">
+                  {students.map(st => (
+                    <label key={st.id} className="flex items-center gap-3 p-2 rounded hover:bg-white/5 cursor-pointer transition-colors">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-indigo-900/50 bg-black/40 text-indigo-500 focus:ring-indigo-500"
+                        checked={selectedStudentIds.includes(st.id)}
+                        onChange={() => toggleStudent(st.id)}
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-white">{st.firstName} {st.lastName}</span>
+                        <span className="text-[10px] text-white/40">{st.email}</span>
+                      </div>
+                    </label>
+                  ))}
+                  {students.length === 0 && <div className="text-center text-xs text-white/40 py-4">No students found.</div>}
+                </div>
+              </div>
+
               <Button 
                 type="submit" 
-                disabled={enrolling}
-                className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold h-10 mt-2"
+                disabled={enrolling || !selectedSubjectId || selectedStudentIds.length === 0}
+                className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:bg-indigo-500 text-white font-bold h-10 mt-auto shrink-0"
               >
-                {enrolling ? 'Enrolling...' : 'Confirm Enrollment'}
+                {enrolling ? 'Enrolling...' : `Enroll ${selectedStudentIds.length} Student(s)`}
               </Button>
             </form>
           </div>
