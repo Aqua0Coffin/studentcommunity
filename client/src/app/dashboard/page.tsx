@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api from '@/lib/api';
+import { supabase } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { AttendanceChart } from '@/components/ui/attendance-chart';
@@ -127,22 +127,37 @@ function ChartTooltip({ active, payload, label }: any) {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [subjectCount, setSubjectCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulating API fetch for attendance
-    const timer = setTimeout(() => {
-      setAttendance([{ percentage: 80 }, { percentage: 85 }]);
+    async function fetchDashboardData() {
+      if (!user) return;
+      setLoading(true);
+      
+      const { data: attData } = await supabase
+        .from('AttendanceSession')
+        .select('status')
+        .eq('studentId', user.id);
+        
+      if (attData) setAttendance(attData);
+
+      const { count } = await supabase
+        .from('Enrollment')
+        .select('*', { count: 'exact', head: true })
+        .eq('studentId', user.id);
+        
+      setSubjectCount(count || 0);
       setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+    
+    fetchDashboardData();
+  }, [user]);
 
-  const avgPct = attendance.length
-    ? Math.round(attendance.reduce((s, a) => s + Number(a.percentage ?? 0), 0) / attendance.length)
-    : 82; // fallback mock
+  const totalSessions = attendance.length;
+  const presentSessions = attendance.filter(a => a.status === 'PRESENT' || a.status === 'EXCUSED').length;
+  const avgPct = totalSessions > 0 ? Math.round((presentSessions / totalSessions) * 100) : 100;
 
-  const subjectCount = attendance.length || 5;
   const fullName = user ? `${user.firstName} ${user.lastName}` : 'Kiki Dev';
 
   return (

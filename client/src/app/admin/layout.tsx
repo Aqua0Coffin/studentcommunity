@@ -48,12 +48,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/users" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-white/70 hover:text-white font-medium transition-colors">
               <Users className="w-5 h-5" /> Role Manager
             </Link>
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-white/50 cursor-not-allowed">
-              <BookOpen className="w-5 h-5" /> Subjects (Locked)
-            </div>
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-white/50 cursor-not-allowed">
-              <Clock className="w-5 h-5" /> Mass Logger (Locked)
-            </div>
+            <Link href="/admin/subjects" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-white/70 hover:text-white font-medium transition-colors">
+              <BookOpen className="w-5 h-5" /> Subjects
+            </Link>
+            <Link href="/admin/attendance" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-white/70 hover:text-white font-medium transition-colors">
+              <Clock className="w-5 h-5" /> Mass Logger
+            </Link>
           </nav>
         </div>
 

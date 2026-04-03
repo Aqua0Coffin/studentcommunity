@@ -1,82 +1,84 @@
--- Enum definitions
-CREATE TYPE "Role" AS ENUM ('STUDENT', 'FACULTY', 'ADMIN');
-CREATE TYPE "LeaveStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
-CREATE TYPE "PostCategory" AS ENUM ('ACADEMIC', 'EVENTS', 'GENERAL');
-CREATE TYPE "TargetAudience" AS ENUM ('ALL', 'SPECIFIC_DEPT', 'SPECIFIC_BATCH');
+-- Enum for Attendance Status
+DO $$ BEGIN
+    CREATE TYPE "AttendanceStatus" AS ENUM ('PRESENT', 'ABSENT', 'EXCUSED');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- Users table
--- Links to Supabase Auth table (auth.users)
-CREATE TABLE public."User" (
-  "id" UUID PRIMARY KEY, -- We will set this to match auth.users.id during sign up
-  "email" TEXT UNIQUE NOT NULL,
-  "firstName" TEXT NOT NULL,
-  "lastName" TEXT NOT NULL,
-  "role" "Role" DEFAULT 'STUDENT',
+-- 1. Subject Table
+CREATE TABLE IF NOT EXISTS public."Subject" (
+  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "courseCode" TEXT UNIQUE NOT NULL,
+  "name" TEXT NOT NULL,
   "departmentId" TEXT,
-  "batchYear" INTEGER,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Note: In Supabase, passwordHash is handled by Supabase Auth natively, so we don't store it here anymore.
-
-CREATE TABLE public."Profile" (
-  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "userId" UUID UNIQUE NOT NULL REFERENCES public."User"("id") ON DELETE CASCADE,
-  "attendancePercentage" FLOAT DEFAULT 0.0,
-  "currentCgpa" FLOAT DEFAULT 0.0,
-  "enrollmentNumber" TEXT UNIQUE NOT NULL
+-- 2. Enrollment Table (Many-to-Many between User and Subject)
+CREATE TABLE IF NOT EXISTS public."Enrollment" (
+  "studentId" UUID NOT NULL REFERENCES public."User"("id") ON DELETE CASCADE,
+  "subjectId" UUID NOT NULL REFERENCES public."Subject"("id") ON DELETE CASCADE,
+  PRIMARY KEY ("studentId", "subjectId")
 );
 
-CREATE TABLE public."Timetable" (
-  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "departmentId" TEXT NOT NULL,
-  "batchYear" INTEGER NOT NULL,
-  "dayOfWeek" INTEGER NOT NULL,
-  "periodNumber" INTEGER NOT NULL,
-  "subjectName" TEXT NOT NULL,
-  "facultyId" UUID NOT NULL REFERENCES public."User"("id") ON DELETE CASCADE,
-  "roomNumber" TEXT NOT NULL
-);
-
-CREATE TABLE public."LeaveRequest" (
+-- 3. AttendanceSession Table
+CREATE TABLE IF NOT EXISTS public."AttendanceSession" (
   "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "studentId" UUID NOT NULL REFERENCES public."User"("id") ON DELETE CASCADE,
-  "startDate" TIMESTAMP WITH TIME ZONE NOT NULL,
-  "endDate" TIMESTAMP WITH TIME ZONE NOT NULL,
-  "reason" TEXT NOT NULL,
-  "documentUrl" TEXT,
-  "status" "LeaveStatus" DEFAULT 'PENDING',
-  "reviewedById" UUID REFERENCES public."User"("id"),
+  "subjectId" UUID NOT NULL REFERENCES public."Subject"("id") ON DELETE CASCADE,
+  "date" DATE NOT NULL,
+  "status" "AttendanceStatus" DEFAULT 'PRESENT',
+  "markedById" UUID NOT NULL REFERENCES public."User"("id") ON DELETE CASCADE,
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  UNIQUE("studentId", "subjectId", "date")
 );
 
-CREATE TABLE public."ForumPost" (
-  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "authorId" UUID NOT NULL REFERENCES public."User"("id") ON DELETE CASCADE,
-  "title" TEXT NOT NULL,
-  "contentMd" TEXT NOT NULL,
-  "category" "PostCategory" NOT NULL,
-  "upvotes" INTEGER DEFAULT 0,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- Security: Row Level Security (RLS) Policies
+ALTER TABLE public."Subject" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."Enrollment" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."AttendanceSession" ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE public."ForumComment" (
-  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "postId" UUID NOT NULL REFERENCES public."ForumPost"("id") ON DELETE CASCADE,
-  "authorId" UUID NOT NULL REFERENCES public."User"("id") ON DELETE CASCADE,
-  "content" TEXT NOT NULL,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- Drop existing policies safely so re-running the script doesn't throw errors
+DROP POLICY IF EXISTS "Anyone can view subjects" ON public."Subject";
+DROP POLICY IF EXISTS "Faculty and Admins can insert/update subjects" ON public."Subject";
+DROP POLICY IF EXISTS "Faculty and Admins can insert subjects" ON public."Subject";
+DROP POLICY IF EXISTS "Faculty and Admins can update subjects" ON public."Subject";
 
-CREATE TABLE public."Announcement" (
-  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "authorId" UUID NOT NULL REFERENCES public."User"("id") ON DELETE CASCADE,
-  "title" TEXT NOT NULL,
-  "content" TEXT NOT NULL,
-  "targetAudience" "TargetAudience" NOT NULL,
-  "isPinned" BOOLEAN DEFAULT FALSE,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+DROP POLICY IF EXISTS "Students can view their own enrollments" ON public."Enrollment";
+DROP POLICY IF EXISTS "Faculty and Admins can manage enrollments" ON public."Enrollment";
+
+DROP POLICY IF EXISTS "Students can view their own attendance" ON public."AttendanceSession";
+DROP POLICY IF EXISTS "Faculty and Admins can log attendance" ON public."AttendanceSession";
+
+-- Subject Policies
+CREATE POLICY "Anyone can view subjects" ON public."Subject" FOR SELECT USING (true);
+CREATE POLICY "Faculty and Admins can insert subjects" ON public."Subject" 
+  FOR INSERT WITH CHECK (
+    auth.uid() IN (SELECT id FROM public."User" WHERE "role" IN ('ADMIN', 'FACULTY'))
+  );
+CREATE POLICY "Faculty and Admins can update subjects" ON public."Subject" 
+  FOR UPDATE USING (
+    auth.uid() IN (SELECT id FROM public."User" WHERE "role" IN ('ADMIN', 'FACULTY'))
+  );
+
+-- Enrollment Policies
+CREATE POLICY "Students can view their own enrollments" ON public."Enrollment"
+  FOR SELECT USING (
+    "studentId" = auth.uid() OR 
+    (auth.uid() IN (SELECT id FROM public."User" WHERE "role" IN ('ADMIN', 'FACULTY')))
+  );
+CREATE POLICY "Faculty and Admins can manage enrollments" ON public."Enrollment"
+  FOR ALL USING (
+    auth.uid() IN (SELECT id FROM public."User" WHERE "role" IN ('ADMIN', 'FACULTY'))
+  );
+
+-- AttendanceSession Policies
+CREATE POLICY "Students can view their own attendance" ON public."AttendanceSession"
+  FOR SELECT USING (
+    "studentId" = auth.uid() OR 
+    (auth.uid() IN (SELECT id FROM public."User" WHERE "role" IN ('ADMIN', 'FACULTY')))
+  );
+CREATE POLICY "Faculty and Admins can log attendance" ON public."AttendanceSession"
+  FOR ALL USING (
+    auth.uid() IN (SELECT id FROM public."User" WHERE "role" IN ('ADMIN', 'FACULTY'))
+  );
