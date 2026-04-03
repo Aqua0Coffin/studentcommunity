@@ -115,7 +115,7 @@ export default function CursorGlow() {
       mouse.y = e.clientY;
       isMoving = true;
       
-      emitParticles(mouse.x, mouse.y);
+      // emitParticles(mouse.x, mouse.y); // Particle effect removed per request
 
       if (glowRef.current) {
         // Maintain the ambient mouse glow
