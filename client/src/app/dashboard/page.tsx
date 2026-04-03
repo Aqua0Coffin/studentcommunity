@@ -156,7 +156,7 @@ export default function DashboardPage() {
 
   const totalSessions = attendance.length;
   const presentSessions = attendance.filter(a => a.status === 'PRESENT' || a.status === 'EXCUSED').length;
-  const avgPct = totalSessions > 0 ? Math.round((presentSessions / totalSessions) * 100) : 100;
+  const avgPct = totalSessions > 0 ? Math.round((presentSessions / totalSessions) * 100) : 0;
 
   const fullName = user ? `${user.firstName} ${user.lastName}` : 'Kiki Dev';
 
