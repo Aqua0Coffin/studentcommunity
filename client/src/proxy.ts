@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+export const runtime = 'experimental-edge';
+
 export async function proxy(request: NextRequest) {
   // Server-side Security Gate.
   // Primary RBAC is handled client-side in src/app/admin/layout.tsx.
